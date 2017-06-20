@@ -1,3 +1,5 @@
+import org.apache.commons.math3.distribution.NormalDistribution;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -17,15 +19,15 @@ public class DataUtil {
     private static Scanner scanner = null;
     private static BufferedReader reader = null;
     private static FileWriter writer = null;
+    private static double[] mean = null;
+    private static double[] deviation = null;
 
-    public static List<TrainPoint> readTrainData() {
+    private static List<TrainPoint> readTrainData() {
         List<TrainPoint> trainPoints = null;
         try {
-//            inputStream = new FileInputStream(TRAIN_DATA_FILE);
-//            scanner = new Scanner(inputStream);
             fileReader = new FileReader(new File(TRAIN_DATA_FILE));
             reader = new BufferedReader(fileReader);
-            trainPoints = new LinkedList<>();
+            trainPoints = new ArrayList<>();
             String line = null;
             String[] lineData;
             String[] indexAndFeature;
@@ -33,9 +35,9 @@ public class DataUtil {
             int index;
             double feature;
             System.out.println("-----------开始读取训练数据-----------");
+            int count = 0;
             while ((line = reader.readLine()) != null) {
-//                line = scanner.nextLine();
-                System.out.println(trainPoints.size());
+                count++;
                 lineData = line.split(" ");
                 line = null;
                 TrainPoint trainPoint = new TrainPoint();
@@ -46,13 +48,15 @@ public class DataUtil {
                     lineData[i] = null;
                     index = Integer.parseInt(indexAndFeature[0]);
                     feature = Double.parseDouble(indexAndFeature[1]);
-                    indexAndFeature = null;
                     trainPoint.getFeatures()[index] = feature;
                 }
 
                 trainPoints.add(trainPoint);
+                if (count >= 10000) {
+                    break;
+                }
             }
-            System.out.println("-----------读取训练数据结束-----------");
+            System.out.println("-----------读取训练数据结束,size:"+trainPoints.size()+"---------------------");
         } catch (Exception e) {
             System.out.println("找不到文件");
             e.printStackTrace();
@@ -64,7 +68,7 @@ public class DataUtil {
 
 
 
-    public static List<TestPoint> readTestData() {
+    private static List<TestPoint> readTestData() {
         List<TestPoint> testPoints = null;
         try {
             inputStream = new FileInputStream(TEST_DATA_FILE);
@@ -79,7 +83,6 @@ public class DataUtil {
                 String[] lineData = line.split(" ");
                 int id = Integer.parseInt(lineData[0]);
                 testPoints.get(id).setId(id);
-                System.out.println("当前数据id："+id);
                 for (int i = 1; i < lineData.length; i++) {
                     String[] indexAndFeature = lineData[i].split(":");
                     int index = Integer.parseInt(indexAndFeature[0]);
@@ -93,6 +96,23 @@ public class DataUtil {
             e.printStackTrace();
         } finally {
             handlerInputStream();
+        }
+        return testPoints;
+    }
+
+    public static List<TestPoint> getTestPoint() {
+        List<TestPoint> testPoints = readTestData();
+        return processTestPoint(testPoints);
+    }
+
+    private static List<TestPoint> processTestPoint(List<TestPoint> testPoints) {
+        for(int i = 0; i < 133; i++) {
+            if (deviation[i] == 0.0)
+                continue;
+            NormalDistribution normalDistribution = new NormalDistribution(mean[i], deviation[i]);
+            for (TestPoint testPoint : testPoints) {
+                testPoint.getFeatures()[i] = normalDistribution.cumulativeProbability(testPoint.getFeatures()[i]);
+            }
         }
         return testPoints;
     }
@@ -117,6 +137,42 @@ public class DataUtil {
                 }
             }
         }
+    }
+
+    private static void calculateMeanAndDeviation(List<TrainPoint> trainPoints) {
+        mean = new double[202];
+        deviation = new double[202];
+        for (int i = 0; i < 202; i++) {
+            double sum = 0.0;
+            for (TrainPoint trainPoint : trainPoints) {
+                sum += trainPoint.getFeatures()[i];
+            }
+            mean[i] = sum/trainPoints.size();
+            double deviationSum = 0.0;
+            for (TrainPoint trainPoint : trainPoints) {
+                deviationSum += Math.pow(trainPoint.getFeatures()[i]-mean[i], 2);
+            }
+            deviation[i] = Math.sqrt(deviationSum/trainPoints.size());
+        }
+    }
+
+    public static List<TrainPoint> getTrainPoints() {
+        List<TrainPoint> trainPoints = readTrainData();
+        calculateMeanAndDeviation(trainPoints);
+        return processTrainPoints(trainPoints);
+    }
+
+
+    public static List<TrainPoint> processTrainPoints(List<TrainPoint> trainPoints) {
+        for (int i = 0; i < 202; i++) {
+            if (deviation[i] == 0.0)
+                continue;
+            NormalDistribution normalDistribution = new NormalDistribution(mean[i], deviation[i]);
+            for (TrainPoint trainPoint : trainPoints) {
+                trainPoint.getFeatures()[i] = normalDistribution.cumulativeProbability(trainPoint.getFeatures()[i]);
+            }
+        }
+        return trainPoints;
     }
 
     private static void handlerInputStream() {

@@ -5,7 +5,8 @@ import java.util.List;
  */
 public class DataUtilTest {
     public static void main(String[] args) {
-        List<TestPoint> testPointList = DataUtil.readTestData();
-        DataUtil.writeSubmission(testPointList);
+        List<TrainPoint> trainPointList = DataUtil.getTrainPoints();
+
+//        DataUtil.writeSubmission(testPointList);
     }
 }

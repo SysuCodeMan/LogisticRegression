@@ -9,9 +9,9 @@ public class TrainPoint {
     public TrainPoint() {
         features = new double[202];
         features[0] = 1.0;
-//        for (int i = 1; i < features.length; i++) {
-//            features[i] = 0.0;
-//        }
+        for (int i = 1; i < features.length; i++) {
+            features[i] = 0.0;
+        }
     }
 
     public double getLabel() {
